@@ -1,6 +1,7 @@
 import docker
 import os
 import csv
+from html_gen import generate_html
 
 dockerClient = docker.from_env()
 
@@ -37,15 +38,18 @@ def get_data():
                 volume_size.append(calculate_files_size(vol["Source"]))
             
             #Dir + file
-            docker_compose = config['Labels']["com.docker.compose.project.working_dir"] + config['Labels']["com.docker.compose.project.config_files"]
+            docker_compose = config['Labels']["com.docker.compose.project.working_dir"] + "/" + config['Labels']["com.docker.compose.project.config_files"]
             data.append([id, name, state, docker_compose, image, volume, volume_size])
 
-    create_csv()
+    # Sort by directory
+    new_data = sorted(data, key=lambda x: x[3])
+    create_csv(new_data)
+    generate_html(new_data)
 
-def create_csv():
+def create_csv(container_data):
     with open(os.getcwd() + "/docker_list.csv", "w") as list_file:
         docker_file = csv.writer(list_file)
         docker_file.writerow(header)
-        docker_file.writerows(data)
+        docker_file.writerows(container_data)
 
 get_data()
