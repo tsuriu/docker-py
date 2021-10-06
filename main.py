@@ -22,27 +22,31 @@ class DockerList():
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
         for container in self.dockerClient.containers.list():
             selected_container = client.inspect_container(container.id)
-            docker_compose_dir = selected_container['Config']['Labels']["com.docker.compose.project.working_dir"]
-            if os.getcwd() in docker_compose_dir:
-                id          = selected_container["Id"]
-                name        = selected_container["Name"][1:]
-                state       = selected_container["State"]["Status"]
-                config      = selected_container['Config'] #ignore
-                image       = config["Image"]
-                volume      = []
-                volume_size = []
+            try:
+                docker_compose_dir = selected_container['Config']['Labels']["com.docker.compose.project.working_dir"]
+                if os.getcwd() in docker_compose_dir:
+                    id          = selected_container["Id"]
+                    name        = selected_container["Name"][1:]
+                    state       = selected_container["State"]["Status"]
+                    config      = selected_container['Config'] #ignore
+                    image       = config["Image"]
+                    volume      = []
+                    volume_size = []
+    
+                    for vol in selected_container["Mounts"]:
+                        volume.append([
+                            vol["Source"],
+                            vol["Destination"]
+                        ])
+                        volume_size.append(self.calculate_files_size(vol["Source"]))
+    
+                    #Dir + file
+                    docker_compose = config['Labels']["com.docker.compose.project.working_dir"] + "/" + config['Labels']["com.docker.compose.project.config_files"]
+                    self.data.append([id, name, state, docker_compose, image, volume, volume_size])
 
-                for vol in selected_container["Mounts"]:
-                    volume.append([
-                        vol["Source"],
-                        vol["Destination"]
-                    ])
-                    volume_size.append(self.calculate_files_size(vol["Source"]))
-
-                #Dir + file
-                docker_compose = config['Labels']["com.docker.compose.project.working_dir"] + "/" + config['Labels']["com.docker.compose.project.config_files"]
-                self.data.append([id, name, state, docker_compose, image, volume, volume_size])
-
+            except:
+                pass
+            
         # Sort by directory
         new_data = sorted(self.data, key=lambda x: x[3])
         self.create_csv(new_data)
