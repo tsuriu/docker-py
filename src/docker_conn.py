@@ -7,9 +7,9 @@ class DockerList:
     header = ["Id", "Name", "State", "Docker Compose", "Image", "Volumes", "Volume Size(Mib)"]
     data = []
     
-    def __init__(self):
+    def __init__(self, config):
         self.dockerClient = docker.from_env()
-        self.main_path = 
+        self.main_path = config["main_path"]
 
     def get_data(self):
         client = docker.APIClient(base_url='unix://var/run/docker.sock')
@@ -17,7 +17,7 @@ class DockerList:
             selected_container = client.inspect_container(container.id)
             try:
                 docker_compose_dir = selected_container['Config']['Labels']["com.docker.compose.project.working_dir"]
-                if os.getcwd() in docker_compose_dir:
+                if self.main_path in docker_compose_dir:
                     id          = selected_container["Id"]
                     name        = selected_container["Name"][1:]
                     state       = selected_container["State"]["Status"]
